@@ -1,0 +1,32 @@
+name: Unzip App Check iOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract ZIP file
+        run: |
+          if [ -f "GBOXIOSVIP-app-check-ios.zip" ]; then
+            echo "A extrair GBOXIOSVIP-app-check-ios.zip..."
+            unzip -o "GBOXIOSVIP-app-check-ios.zip" -d ./
+            rm -f "GBOXIOSVIP-app-check-ios.zip"
+          else
+            echo "Ficheiro ZIP não encontrado na raiz!"
+            exit 1
+          fi
+
+      - name: Commit extracted files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-extrair GBOXIOSVIP-app-check-ios.zip na raiz"
+          branch: ${{ github.ref_name }}
+          skip_ci: true
