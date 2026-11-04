@@ -1,0 +1,46 @@
+workflows:
+  ios-unsigned:
+    name: GBOXIOSVIP iOS 2.1 build 2 (unsigned)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Check Xcode project
+        script: |
+          set -euo pipefail
+          xcodebuild -list -project "$CM_BUILD_DIR/ThreeOneOSFive.xcodeproj"
+      - name: Build unsigned GBOXIOSVIP app
+        script: |
+          set -o pipefail
+          mkdir -p "$CM_BUILD_DIR/build/DerivedData/Build/Products/Release-iphoneos"
+          xcodebuild \
+            -project "$CM_BUILD_DIR/ThreeOneOSFive.xcodeproj" \
+            -target "3105" \
+            -configuration Release \
+            -sdk iphoneos \
+            CONFIGURATION_BUILD_DIR="$CM_BUILD_DIR/build/DerivedData/Build/Products/Release-iphoneos" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee "$CM_BUILD_DIR/build/xcodebuild.log"
+      - name: Verify metadata, protected patches and package IPA
+        script: |
+          set -euo pipefail
+          APP_PATH="$CM_BUILD_DIR/build/DerivedData/Build/Products/Release-iphoneos/3105.app"
+          test -d "$APP_PATH"
+          RESOURCE_DIR="$APP_PATH/OfficialPatches"
+          test -d "$RESOURCE_DIR"
+          PATCH_COUNT="$(find "$RESOURCE_DIR" -maxdepth 1 -type f -name '*.mfp' | wc -l | tr -d ' ')"
+          test "$PATCH_COUNT" = "5"
+          ! find "$RESOURCE_DIR" -maxdepth 1 -type f -name '*.3105' | grep -q .
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist" | grep -qx '2.1'
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Info.plist" | grep -qx '2'
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist" | grep -qx 'com.apple.mobile.MobileHouseArrest'
+          IPA_DIR="$CM_BUILD_DIR/build/ipa"
+          mkdir -p "$IPA_DIR/Payload"
+          ditto "$APP_PATH" "$IPA_DIR/Payload/3105.app"
+          (cd "$IPA_DIR" && /usr/bin/zip -qry "$IPA_DIR/GBOXIOSVIP.ipa" Payload)
+    artifacts:
+      - build/ipa/GBOXIOSVIP.ipa
+      - build/xcodebuild.log

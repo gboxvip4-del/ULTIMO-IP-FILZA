@@ -1,0 +1,18 @@
+# Xcode
+.DS_Store
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Build outputs and packaged apps
+build/
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Local signing credentials (never commit)
+*.p12
+*.mobileprovision
+*.provisionprofile
+.env
+.env.*
